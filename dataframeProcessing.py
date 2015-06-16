@@ -5,50 +5,37 @@ import re
 
 
 def read_apache_log_to_dataFrame(log_file_to_read):
+    file_contents = []
+    access_log_regex = r'(?P<ip_address>\S+) (?P<remote_username>\S+) (?P<remote_user>\S+) \[(?P<request_received_timestamp>\S+ \S+)\] "(?P<http_request_method>\S+) (?P<http_request_uri>\S+) (?P<http_request_version>\S+)" (?P<http_status>\S+) (?P<response_size_bytes>\S+) (?P<time_to_serve_request_milliseconds>\S+) (?P<keep_alive_requests>\S+) (?P<referer>".*?") (?P<user_agent>".*?") (?P<content_type>".*?") (?P<jsession_id>\S+)'  #need to add nice line breaks
+    
+    compiled_regex = re.compile(access_log_regex)
     
     f = open(log_file_to_read)
-    file_contents = []
-    line_dict = {}
-    column_names = ['ip_address', 'remote_username', 'remote_user', 'request_received_timestamp', 'http_request_method',
-                'http_request_uri', 'http_request_version', 'http_status', 'response_size_bytes',
-                'time_to_serve_request_milliseconds', 'keep_alive_requests', 'referer', 'user_agent', 'content_type',
-                'jsession_id']
-    access_log_regex = r'(\S+) (\S+) (\S+) \[(\S+ \S+)\] "(\S+) (\S+) (\S+)" (\S+) (\S+) (\S+) (\S+) (".*?")\
-     (".*?") (".*?") (\S+)'
-
     for line in f:
-
-        regex_match = re.search(access_log_regex, line)
-
+ 
         try:
-            line_dict['ip_address'] = regex_match.group(1)
-            line_dict['remote_username'] = regex_match.group(2)
-            line_dict['remote_user'] = regex_match.group(3)
-            line_dict['request_received_timestamp'] = regex_match.group(4)
-            line_dict['http_request_method'] = regex_match.group(5)
-            line_dict['http_request_uri'] = regex_match.group(6)
-            line_dict['http_request_version'] = regex_match.group(7)
-            line_dict['http_status'] = regex_match.group(8)
-            line_dict['response_size_bytes'] = regex_match.group(9)
-            line_dict['time_to_serve_request_milliseconds'] = regex_match.group(10)
-            line_dict['keep_alive_requests'] = regex_match.group(11)
-            line_dict['referer'] = regex_match.group(12)
-            line_dict['user_agent'] = regex_match.group(13)
-            line_dict['content_type'] = regex_match.group(14)
-            line_dict['jsession_id'] = regex_match.group(15)
-            
+            regex_match = compiled_regex.search(line)
+            line_dict = regex_match.groupdict()
             file_contents.append(line_dict.copy())
         except AttributeError:
-            #AttributeError raised when nothing matches the regex.
+            #AttributeError raised when nothing matches the regex and try to assign in dict.
             #I have cases currently where I expect that to happen
             #and I just want them skipped.
             #Insert error handling here if needed
             pass
+            
 
     data_frame = pd.DataFrame(file_contents)
     f.close()
     return data_frame
 
+
+def get_top_n_from_field(data_frame, field, n):
+    try:        
+        return data_frame[field].value_counts()[:n]
+    except AttributeError:
+        print('The field "{}" did not exist in the dataframe'.format(field))
+        return None    #Need to figure out something better to do here.  Pass? return an empty Series?
 
 def drop_dataframe_lines(data_frame, search_item, field_to_search, matching_location='anywhere', drop_if='matched'):
     
@@ -60,6 +47,13 @@ def drop_dataframe_lines(data_frame, search_item, field_to_search, matching_loca
         regex = location_options[matching_location].format(search_item)
     except KeyError:
         #Print something useful so you know what happened
-        
+        pass  #remove this when exception behavior defined
     #more stuff here!
+    pass
 
+
+if __name__ == "__main__":
+    path_to_file = '/Users/daniel.harada/Test-HTTPD-Access.log'
+    test_data_frame = read_apache_log_to_dataFrame(path_to_file)
+    print(test_data_frame[:10])
+    print(get_top_n_from_field(test_data_frame, 'ip_address', 10)) 
