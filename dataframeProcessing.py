@@ -23,37 +23,48 @@ def read_apache_log_to_dataFrame(log_file_to_read):
             #and I just want them skipped.
             #Insert error handling here if needed
             pass
-            
+        
+        file_contents.append(line_dict.copy())    
 
     data_frame = pd.DataFrame(file_contents)
     f.close()
     return data_frame
 
 
-def get_top_n_from_field(data_frame, field, n):
-    try:        
-        return data_frame[field].value_counts()[:n]
-    except AttributeError:
-        print('The field "{}" did not exist in the dataframe'.format(field))
-        return None    #Need to figure out something better to do here.  Pass? return an empty Series?
+def top_10_user_agents(data_frame):
+    #columns wanted - User Agent, Count of Requests
+    return data_frame['user_agent'].value_counts().head(10)
 
-def drop_dataframe_lines(data_frame, search_item, field_to_search, matching_location='anywhere', drop_if='matched'):
-    
-    #  Make sure this method does not modify data_frame in place.  Create copy and modify that! 
-    
-    
-    location_options={'anywhere':r'{}', 'start_of_field':r'^{}', 'end_of_field':r'{}$'}
-    try:
-        regex = location_options[matching_location].format(search_item)
-    except KeyError:
-        #Print something useful so you know what happened
-        pass  #remove this when exception behavior defined
-    #more stuff here!
-    pass
+def top_10_ip_addresses(data_frame):
+    #columns - IP Address, Count of Requests
+    return data_frame['ip_address'].value_counts().head(10)
+
+def top_10_request_URIs(data_frame):
+    #columns - Request URIs, Count of Requests
+    return data_frame['ip_address'].value_counts().head(10)
+
+def top_10_referers(data_frame):
+    #columns - Referer URI, Count of Requests
+    returndata_frame['ip_address'].value_counts().head(10)
+
+def top_10_slowest_requests(data_frame):
+    #columns - Request response time, response size, request URI, response code, request time, IP address for this request, # requests to this URI, avg response time on this URI, avg response size
+
+    return
+
+def top_10_largest_response_sizes(data_frame):
+    #columns - Response size, response time, request URI,  response code, IP address for this request, timestamp for this request, # requests to this URI, avg response size to this URI, avg response time to this URI
+
+    return
+
+def counts_by_status_code(data_frame):
+    #columns - status code, total counts
+
+    return
+
 
 
 if __name__ == "__main__":
     path_to_file = '/Users/daniel.harada/Test-HTTPD-Access.log'
     test_data_frame = read_apache_log_to_dataFrame(path_to_file)
     print(test_data_frame[:10])
-    print(get_top_n_from_field(test_data_frame, 'ip_address', 10)) 
