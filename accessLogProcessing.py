@@ -1,4 +1,4 @@
-#dataframeProcessing module
+#accessLogProcessing module
 
 import pandas as pd
 import re
@@ -41,26 +41,58 @@ def top_10_ip_addresses(data_frame):
 
 def top_10_request_URIs(data_frame):
     #columns - Request URIs, Count of Requests
-    return data_frame['ip_address'].value_counts().head(10)
+    return data_frame['http_request_uri'].value_counts().head(10)
 
 def top_10_referers(data_frame):
     #columns - Referer URI, Count of Requests
-    returndata_frame['ip_address'].value_counts().head(10)
+    return data_frame['referer'].value_counts().head(10)
 
 def top_10_slowest_requests(data_frame):
-    #columns - Request response time, response size, request URI, response code, request time, IP address for this request, # requests to this URI, avg response time on this URI, avg response size
-
-    return
+    #columns - Request response time, request URI, HTTP status of request, response size, response content type, timestamp, IP address   
+    return data_frame[['time_to_serve_request_milliseconds', 'http_request_uri', 'http_status', 'response_size_bytes', 'content_type', 'request_received_timestamp', 'ip_address']].sort(columns='time_to_serve_request_milliseconds', ascending=False).head(10)
 
 def top_10_largest_response_sizes(data_frame):
-    #columns - Response size, response time, request URI,  response code, IP address for this request, timestamp for this request, # requests to this URI, avg response size to this URI, avg response time to this URI
-
-    return
+    #columns - Response size, request URI, HTTP status of request, request response time, response content type, timestamp, IP address 
+    return data_frame[['response_size_bytes', 'http_request_uri', 'http_status', 'time_to_serve_request_milliseconds', 'content_type', 'request_received_timestamp', 'ip_address']].sort(columns='response_size_bytes', ascending=False).head(10)
 
 def counts_by_status_code(data_frame):
     #columns - status code, total counts
+    return data_frame['http_status'].value_counts()
 
+
+
+def print_aggregates(log_file):
+    data_frame = read_apache_log_to_dataFrame(log_file)
+
+    print('Top 10 User Agents' + '\n')
+    print(top_10_user_agents(data_frame))
+    print()
+      
+    print('Top 10 IP Addresses' + '\n')
+    print(top_10_ip_addresses(data_frame))
+    print()
+          
+    print('Top 10 Request URIs' + '\n')
+    print(top_10_request_URIs(data_frame))
+    print()
+
+    print('Top 10 Referers' + '\n')
+    print(top_10_referers(data_frame))
+    print()
+    
+    print('Status code counts')
+    print(counts_by_status_code(data_frame))
+    print()
+    
+    print('Top 10 Slowest Requests')
+    print(top_10_slowest_requests(data_frame))
+    print()
+    
+    print('Top 10 Largest Response Sizes')
+    print(top_10_largest_response_sizes(data_frame))    
+          
     return
+          
 
 
 
