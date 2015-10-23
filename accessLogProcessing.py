@@ -1,33 +1,58 @@
 #accessLogProcessing module
 
+import argparse
 import pandas as pd
 import re
 
+def get_command_line_arguments():
+    parser = argparse.ArgumentParser(description='Parse Jive\'s Apache Access logs, and print out aggregated data from them.')
+    parser.add_argument('input_log_files', metavar='files', nargs='+', action = 'store', default = [],
+                   help='List of Apache access log files to parse')
+    return parser.parse_args()
 
-def read_apache_log_to_dataFrame(log_file_to_read):
-    file_contents = []
-    access_log_regex = r'(?P<ip_address>\S+) (?P<remote_username>\S+) (?P<remote_user>\S+) \[(?P<request_received_timestamp>\S+ \S+)\] "(?P<http_request_method>\S+) (?P<http_request_uri>\S+) (?P<http_request_version>\S+)" (?P<http_status>\S+) (?P<response_size_bytes>\S+) (?P<time_to_serve_request_milliseconds>\S+) (?P<keep_alive_requests>\S+) (?P<referer>".*?") (?P<user_agent>".*?") (?P<content_type>".*?") (?P<jsession_id>\S+)'  #need to add nice line breaks
+def read_apache_log_to_dataframe(opened_file_to_read):
+    #If file is there, returns a dataframe composed of the lines that successfully match the access_log_regex.  If file
+    #    does not exist, returns 'FileNotFound'
     
+    #Apache Log Format: "%{JiveClientIP}i %l %u %t \"%r\" %>s %b %T %k \"%{Referer}i\" \"%{User-Agent}i\" \"%{Content-Type}o\" 
+    #                    %{JSESSIONID}C" common
+    #This regex parses a log line into the above items, with %r being separated into the request method, request URI, and HTTP 
+    #    version.  The Time to serve request claims to be in milliseconds, but I think for some versions of Jive this is
+    #    not true.  Sometimes it will be in whole seconds.
+    access_log_regex = r'(\S+) (\S+) (\S+) \[(\S+ \S+)\] "(\S+) (\S+) (\S+)" (\S+) (\S+) (\S+) (\S+) (".*?") (".*?") (".*?") (\S+)'
     compiled_regex = re.compile(access_log_regex)
+    file_contents = []
+    line_dict = {}
     
-    f = open(log_file_to_read)
     for line in f:
- 
+        regex_match = compiled_regex.search(line)
+
         try:
-            regex_match = compiled_regex.search(line)
-            line_dict = regex_match.groupdict()
+            line_dict['ip_address'] = regex_match.group(1)
+            line_dict['remote_username'] = regex_match.group(2)
+            line_dict['remote_user'] = regex_match.group(3)
+            line_dict['request_received_timestamp'] = regex_match.group(4)
+            line_dict['http_request_method'] = regex_match.group(5)
+            line_dict['http_request_uri'] = regex_match.group(6)
+            line_dict['http_request_version'] = regex_match.group(7)
+            line_dict['http_status'] = regex_match.group(8)
+            line_dict['response_size_bytes'] = regex_match.group(9)
+            line_dict['time_to_serve_request_milliseconds'] = regex_match.group(10)
+            line_dict['keep_alive_requests'] = regex_match.group(11)
+            line_dict['referer'] = regex_match.group(12)
+            line_dict['user_agent'] = regex_match.group(13)
+            line_dict['content_type'] = regex_match.group(14)
+            line_dict['jsession_id'] = regex_match.group(15)
+
             file_contents.append(line_dict.copy())
+
+        #AttributeError thrown when trying to assign matched groups if a match was not found on that line (i.e. match = None)
         except AttributeError:
-            #AttributeError raised when nothing matches the regex and try to assign in dict.
-            #I have cases currently where I expect that to happen
-            #and I just want them skipped.
-            #Insert error handling here if needed
+            print('Attribute Error for:')
+            print(line)
             pass
-        
-        file_contents.append(line_dict.copy())    
 
     data_frame = pd.DataFrame(file_contents)
-    f.close()
     return data_frame
 
 
@@ -61,8 +86,7 @@ def counts_by_status_code(data_frame):
 
 
 
-def print_aggregates(log_file):
-    data_frame = read_apache_log_to_dataFrame(log_file)
+def print_aggregates(data_frame):
 
     print('Top 10 User Agents' + '\n')
     print(top_10_user_agents(data_frame))
@@ -92,11 +116,19 @@ def print_aggregates(log_file):
     print(top_10_largest_response_sizes(data_frame))    
           
     return
-          
 
-
+      
 
 if __name__ == "__main__":
-    path_to_file = '/Users/daniel.harada/Test-HTTPD-Access.log'
-    test_data_frame = read_apache_log_to_dataFrame(path_to_file)
-    print(test_data_frame[:10])
+    args = get_command_line_arguments()
+    
+    for file in args.input_log_files:
+        try:
+            with open(file) as f:
+                print('File:  ' + file +'\n\n')
+                data_frame = read_apache_log_to_dataframe(f)
+                print_aggregates(data_frame)
+        except FileNotFoundError:
+            print('File not found:  ' + file +'\n')
+
+
